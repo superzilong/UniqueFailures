@@ -133,18 +133,21 @@ def parse(reportFilePath, caseType, outputDir):
                         outputTestM = testM
 
                     url = r"http://qcrt.mscsoftware.com/TestResult/SearchTestResult.aspx?IsQueryString=True&TestType=%27{}%27&CodeLine={}&ChangeList={}&TestMethod={}&OS=Windows&#QueryString".format(caseType.upper(), codeline, CLNum, testPath)
-                    # print(url)
+                    print(url)
                     html = urllib.request.urlopen(url, None, 30).read().decode('utf-8')
                     #print(html)
                     soup = BS(html, features='lxml')
                     table = soup.find("table", {"id": "MainContent_GridViewTestResult"})
-                    trSeq = table.find_all("tr")
-                    if len(trSeq) == 2:
-                        tdSeq = trSeq[1].find_all("td")
-                        reportFailFile.write(outputTestM+','+status+','+tdSeq[5].text+','+url+'\n')
-                        if tdSeq[5].text.lower() in ['fail', 'error', 'inconclusive']:
-                            bFailedInQCRT = True
-                            # print(url)
+                    if table:
+                        trSeq = table.find_all("tr")
+                        if len(trSeq) == 2:
+                            tdSeq = trSeq[1].find_all("td")
+                            reportFailFile.write(outputTestM+','+status+','+tdSeq[5].text+','+url+'\n')
+                            if tdSeq[5].text.lower() in ['fail', 'error', 'inconclusive']:
+                                bFailedInQCRT = True
+                                # print(url)
+                    else:
+                        reportFailFile.write(outputTestM+','+status+'\n')
                     if not bFailedInQCRT:
                         uniqueFailFile.write(outputTestM +'\n')
     print('### Congratulations! Execute successfully!')
