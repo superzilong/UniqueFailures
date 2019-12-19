@@ -98,7 +98,6 @@ def parse(reportFilePath, caseType, outputDir):
     localtime = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     with open(os.path.join(outputDir, 'UniqueFailures_{}_{}.txt'.format(caseType, localtime)), 'w+') as uniqueFailFile, open(os.path.join(outputDir, 'ReportFailures_{}_{}.csv'.format(caseType, localtime)), 'w+') as reportFailFile:
         for i, line in enumerate(lines):
-            bFailedInQCRT = False
             line = line.strip()
             elems = line.split(',')
             if i == 0:
@@ -112,6 +111,8 @@ def parse(reportFilePath, caseType, outputDir):
                     idxStatus = elems.index('result')
                 reportFailFile.write(r'TestMethod,LocalStatus,QCRTStatus,Link'+'\n')
             else:
+                bFoundInQCRT = False
+                bFailedInQCRT = False
                 status = elems[idxStatus]
                 if status.lower() in ['fail', 'error', 'inconclusive']:
                     failcount += 1
@@ -143,10 +144,11 @@ def parse(reportFilePath, caseType, outputDir):
                         if len(trSeq) == 2:
                             tdSeq = trSeq[1].find_all("td")
                             reportFailFile.write(outputTestM+','+status+','+tdSeq[5].text+','+url+'\n')
+                            bFoundInQCRT = True
                             if tdSeq[5].text.lower() in ['fail', 'error', 'inconclusive']:
                                 bFailedInQCRT = True
                                 # print(url)
-                    else:
+                    if not bFoundInQCRT:
                         reportFailFile.write(outputTestM+','+status+'\n')
                     if not bFailedInQCRT:
                         uniqueFailFile.write(outputTestM +'\n')
