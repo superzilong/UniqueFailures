@@ -141,7 +141,7 @@ def parse(reportFilePath, caseType, outputDir):
                             uniqueFailFile.write(testFile+r' <'+testM+r'>'+'\n')
                         elif caseType == 'bbt':
                             uniqueFailFile.write(testM +'\n')
-
+    print('### Congratulations! Execute successfully!')
 if __name__ == "__main__":
     main()
 
