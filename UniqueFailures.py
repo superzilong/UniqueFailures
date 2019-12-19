@@ -88,12 +88,15 @@ def parse(reportFilePath, caseType, outputDir):
     # Parse csv file to get fail, error and inclusive cases.
     resFile = open(csvFileName, 'r')
     lines = resFile.readlines()
+    if len(lines) <= 1:
+        print('### Empty result csv file.')
+        return
     idxTestFile = 0
     idxTestMethod = 0
     idxStatus = 0
     failcount = 0
     localtime = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    with open(os.path.join(outputDir, 'UniqueFailures_{}_{}.txt'.format(caseType, localtime)), 'w+') as uniqueFailFile:
+    with open(os.path.join(outputDir, 'UniqueFailures_{}_{}.txt'.format(caseType, localtime)), 'w+') as uniqueFailFile, open(os.path.join(outputDir, 'ReportFailures_{}_{}.csv'.format(caseType, localtime)), 'w+') as reportFailFile:
         for i, line in enumerate(lines):
             bFailedInQCRT = False
             line = line.strip()
@@ -107,6 +110,7 @@ def parse(reportFilePath, caseType, outputDir):
                     idxTestFile = -1
                     idxTestMethod = elems.index('name')
                     idxStatus = elems.index('result')
+                reportFailFile.write(r'TestMethod,LocalStatus,QCRTStatus,Link'+'\n')
             else:
                 status = elems[idxStatus]
                 if status.lower() in ['fail', 'error', 'inconclusive']:
@@ -115,15 +119,19 @@ def parse(reportFilePath, caseType, outputDir):
                     testFile = ''
                     testM = ''
                     testPath = ''
+                    outputTestM = ''
                     if caseType=='lrt':
                         testFile = elems[idxTestFile]
                         testFileT = testFile.replace("\\", r"$")
                         testM = elems[idxTestMethod]
                         testPath = r"{}%20@%@{}%*%".format(testFileT, testM)
+                        outputTestM = testFile+r' <'+testM+r'>'
                     elif caseType=='bbt':
                         testFile = ''
                         testM = elems[idxTestMethod] 
                         testPath = testM
+                        outputTestM = testM
+
                     url = r"http://qcrt.mscsoftware.com/TestResult/SearchTestResult.aspx?IsQueryString=True&TestType=%27{}%27&CodeLine={}&ChangeList={}&TestMethod={}&OS=Windows&#QueryString".format(caseType.upper(), codeline, CLNum, testPath)
                     # print(url)
                     html = urllib.request.urlopen(url, None, 30).read().decode('utf-8')
@@ -133,14 +141,12 @@ def parse(reportFilePath, caseType, outputDir):
                     trSeq = table.find_all("tr")
                     if len(trSeq) == 2:
                         tdSeq = trSeq[1].find_all("td")
+                        reportFailFile.write(outputTestM+','+status+','+tdSeq[5].text+','+url+'\n')
                         if tdSeq[5].text.lower() in ['fail', 'error', 'inconclusive']:
                             bFailedInQCRT = True
-                            print(url)
+                            # print(url)
                     if not bFailedInQCRT:
-                        if caseType == 'lrt':
-                            uniqueFailFile.write(testFile+r' <'+testM+r'>'+'\n')
-                        elif caseType == 'bbt':
-                            uniqueFailFile.write(testM +'\n')
+                        uniqueFailFile.write(outputTestM +'\n')
     print('### Congratulations! Execute successfully!')
 if __name__ == "__main__":
     main()
