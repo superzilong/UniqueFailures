@@ -1,4 +1,4 @@
-import os, fnmatch, re, sys, getopt, urllib.request,time
+import os, fnmatch, re, sys, getopt, urllib.request,time,csv
 from bs4 import BeautifulSoup as BS
 
 def main():
@@ -86,55 +86,49 @@ def parse(reportFilePath, caseType, outputDir):
     print("### CL Number is: "+CLNum)
 
     # Parse csv file to get fail, error and inclusive cases.
-    resFile = open(csvFileName, 'r')
-    lines = resFile.readlines()
-    if len(lines) <= 1:
-        print('### Empty result csv file.')
-        return
-    idxTestFile = 0
-    idxTestMethod = 0
-    idxStatus = 0
+    resFile = open(csvFileName, 'r', newline='')
+    reader = csv.DictReader(resFile)
+
     failcount = 0
     localtime = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     with open(os.path.join(outputDir, 'UniqueFailures_{}_{}.txt'.format(caseType, localtime)), 'w+') as uniqueFailFile, open(os.path.join(outputDir, 'ReportFailures_{}_{}.csv'.format(caseType, localtime)), 'w+') as reportFailFile:
-        for i, line in enumerate(lines):
-            line = line.strip()
-            elems = line.split(',')
+        for i, row in enumerate(reader):
             if i == 0:
-                if caseType=='lrt':
-                    idxTestFile = elems.index('TestFile')
-                    idxTestMethod = elems.index('TestMethod')
-                    idxStatus = elems.index('Status')
-                elif caseType=='bbt':
-                    idxTestFile = -1
-                    idxTestMethod = elems.index('name')
-                    idxStatus = elems.index('result')
                 reportFailFile.write(r'TestMethod,LocalStatus,QCRTStatus,Link'+'\n')
             else:
                 bFoundInQCRT = False
                 bFailedInQCRT = False
-                status = elems[idxStatus]
+                # Get case status in local.
+                status = ''
+                if caseType=='lrt':
+                    status = row['Status']
+                elif caseType=='bbt':
+                    status = row['result']
+
+                # If case failed in local, need to search result in QCRT and compare.
                 if status.lower() in ['fail', 'error', 'inconclusive']:
                     failcount += 1
-                    #print(elems[idxTestFile]+elems[idxTestMethod])
                     testFile = ''
                     testM = ''
                     testPath = ''
                     outputTestM = ''
+
+                    # Format the search url
                     if caseType=='lrt':
-                        testFile = elems[idxTestFile]
+                        testFile = row['TestFile']
                         testFileT = testFile.replace("\\", r"$")
-                        testM = elems[idxTestMethod]
+                        testM = row['TestMethod']
                         testPath = r"{}%20@%@{}%*%".format(testFileT, testM)
                         outputTestM = testFile+r' <'+testM+r'>'
                     elif caseType=='bbt':
                         testFile = ''
-                        testM = elems[idxTestMethod] 
+                        testM = row['TestMethod'] 
                         testPath = testM
                         outputTestM = testM
-
                     url = r"http://qcrt.mscsoftware.com/TestResult/SearchTestResult.aspx?IsQueryString=True&TestType=%27{}%27&CodeLine={}&ChangeList={}&TestMethod={}&OS=Windows&#QueryString".format(caseType.upper(), codeline, CLNum, testPath)
                     print(url)
+
+                    # Parse url and get result from QCRT.
                     html = urllib.request.urlopen(url, None, 30).read().decode('utf-8')
                     #print(html)
                     soup = BS(html, features='lxml')
@@ -152,7 +146,9 @@ def parse(reportFilePath, caseType, outputDir):
                         reportFailFile.write(outputTestM+','+status+'\n')
                     if not bFailedInQCRT:
                         uniqueFailFile.write(outputTestM +'\n')
+    resFile.close()
     print('### Congratulations! Execute successfully!')
+
 if __name__ == "__main__":
     main()
 
