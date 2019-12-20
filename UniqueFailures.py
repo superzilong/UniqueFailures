@@ -122,7 +122,7 @@ def parse(reportFilePath, caseType, outputDir):
                         outputTestM = testFile+r' <'+testM+r'>'
                     elif caseType=='bbt':
                         testFile = ''
-                        testM = row['TestMethod'] 
+                        testM = row['name'] 
                         testPath = testM
                         outputTestM = testM
                     url = r"http://qcrt.mscsoftware.com/TestResult/SearchTestResult.aspx?IsQueryString=True&TestType=%27{}%27&CodeLine={}&ChangeList={}&TestMethod={}&OS=Windows&#QueryString".format(caseType.upper(), codeline, CLNum, testPath)
@@ -147,6 +147,7 @@ def parse(reportFilePath, caseType, outputDir):
                     if not bFailedInQCRT:
                         uniqueFailFile.write(outputTestM +'\n')
     resFile.close()
+    os.startfile(reportFailFile.name);
     print('### Congratulations! Execute successfully!')
 
 if __name__ == "__main__":
